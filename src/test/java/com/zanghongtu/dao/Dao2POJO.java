@@ -4,6 +4,7 @@ import com.zanghongtu.file.FileOperator;
 import com.zanghongtu.string.CamelCase;
 import org.junit.Test;
 import org.junit.runner.RunWith;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.junit4.SpringRunner;
@@ -59,6 +60,7 @@ public class Dao2POJO {
                     ResultSetMetaData resultSetMetaData = rs.getMetaData();
                     System.out.println("================" + tableName + "================");
                     String className = CamelCase.toCamelCaseClassName(tableName);
+                    String moduleName = CamelCase.toCamelCase(tableName);
 
                     Set<String> setJavaTypes = new HashSet<>();
                     Map<String, String> mapParams = new HashMap<>();
@@ -77,8 +79,10 @@ public class Dao2POJO {
                         mapParams.put(colName, colType);
                         mapParamColumns.put(colName, resultSetMetaData.getColumnName(i));
                     }
-                    writePojos(className, tableName, setJavaTypes, mapParams, mapParamColumns);
-                    writeRepositories(className, tableName, idType);
+//                    writePojos(className, tableName, setJavaTypes, mapParams, mapParamColumns);
+//                    writeRepositories(className, tableName, idType);
+                    writeServices(className, moduleName, idType);
+                    writeServiceImpls(className, moduleName, idType);
                 } finally {
                     if (ps != null) {
                         ps.close();
@@ -101,9 +105,100 @@ public class Dao2POJO {
         }
     }
 
+    private void writeServiceImpls(String className, String moduleName, String idType) {
+        String modelPackage = databasepackage + ".service.impl";
+        String dirPath = System.getProperty("user.dir") + "/src/main/java/" + modelPackage.replace(".", "/");
+        File dir = new File(dirPath);
+        if (!dir.exists()) {
+            dir.mkdirs();
+        }
+
+        StringBuilder serviceContent = new StringBuilder();
+        serviceContent.append("package " + modelPackage + ";\n\n")
+                .append("import " + databasepackage + ".model." + className + ";\n")
+                .append("import " + databasepackage + ".repository." + className + "Repository;\n")
+                .append("import " + databasepackage + ".service." + className + "Service;\n")
+                .append("import org.springframework.beans.factory.annotation.Autowired;\n")
+                .append("import org.springframework.stereotype.Service;\n\n")
+                .append("import java.util.List;\n\n")
+                .append("/**\n")
+                .append(" * @author : Auto Generated\n")
+                .append(" */\n\n")
+                .append("@Service\n")
+                .append("public class " + className + "ServiceImpl implements " + className + "Service {\n")
+                .append(tab).append("@Autowired\n")
+                .append(tab).append("private " + className + "Repository " + moduleName + "Repository;\n\n")
+
+                .append(tab).append("@Override\n")
+                .append(tab).append("public " + className + " create(" + className + " " + moduleName + ") {\n")
+                .append(tab).append(tab).append("return " + moduleName + "Repository.save(" + moduleName + ");\n")
+                .append(tab).append("}\n\n")
+
+                .append(tab).append("@Override\n")
+                .append(tab).append("public " + className + " delete(" + idType + " id) {\n")
+                .append(tab).append(tab).append(className + " " + moduleName + "=" + moduleName + "Repository.getOne(id);\n")
+                .append(tab).append(tab).append(moduleName + "Repository.deleteById(id);\n")
+                .append(tab).append(tab).append("return " + moduleName + ";\n")
+                .append(tab).append("}\n\n")
+
+                .append(tab).append("@Override\n")
+                .append(tab).append("public " + className + " update(" + className + " " + moduleName + ") {\n")
+                .append(tab).append(tab).append("return " + moduleName + "Repository.save(" + moduleName + ");\n")
+                .append(tab).append("}\n\n")
+
+                .append(tab).append("@Override\n")
+                .append(tab).append("public " + className + " get(" + idType + " id) {\n")
+                .append(tab).append(tab).append("return " + moduleName + "Repository.getOne(id);\n")
+                .append(tab).append("}\n\n")
+
+                .append(tab).append("@Override\n")
+                .append(tab).append("public List<" + className + "> listAll() {\n")
+                .append(tab).append(tab).append("return " + moduleName + "Repository.findAll();\n")
+                .append(tab).append("}\n\n")
+
+                .append("}\n");
+
+
+        String filePath = dirPath + "/" + className + "ServiceImpl.java";
+        FileOperator.writeFile(filePath, serviceContent.toString());
+    }
+
+    private void writeServices(String className, String modelName, String idType) {
+        String modelPackage = databasepackage + ".service";
+        String dirPath = System.getProperty("user.dir") + "/src/main/java/" + modelPackage.replace(".", "/");
+        File dir = new File(dirPath);
+        if (!dir.exists()) {
+            dir.mkdirs();
+        }
+
+        String serviceContent = ("package " + modelPackage + ";\n\n") +
+                "import " + databasepackage + ".model." + className + ";\n" +
+                "import java.util.List;\n" +
+                "/**\n" +
+                " * @author : Auto Generated\n" +
+                " */\n" +
+                "public interface " + className + "Service {\n" +
+                tab + className + " create(" + className + " " + modelName + ");\n\n" +
+                tab + className + " delete(" + idType + " id);\n\n" +
+                tab + className + " update(" + className + " " + modelName + ");\n\n" +
+                tab + className + " get(" + idType + " id);\n\n" +
+                tab + "List<" + className + "> listAll();\n\n" +
+                "}\n\n";
+
+
+        String filePath = dirPath + "/" + className + "Service.java";
+        FileOperator.writeFile(filePath, serviceContent);
+    }
+
     private void writeRepositories(String className, String tableName, String idType) {
         String modelPackage = databasepackage + ".repository";
-        String repoContent = "package com.zanghongtu.database.repository;\n\n" +
+        String dirPath = System.getProperty("user.dir") + "/src/main/java/" + modelPackage.replace(".", "/");
+        File dir = new File(dirPath);
+        if (!dir.exists()) {
+            dir.mkdirs();
+        }
+
+        String repoContent = "package " + modelPackage + ";\n\n" +
                 "import " + databasepackage + ".model." + className + ";\n" +
                 "import org.springframework.data.jpa.repository.JpaRepository;\n" +
                 "/**\n" +
@@ -112,12 +207,6 @@ public class Dao2POJO {
                 "public interface " + className + "Repository extends JpaRepository<" +
                 className + ", " + idType + "> {\n" +
                 "}\n";
-
-        String dirPath = System.getProperty("user.dir") + "/src/main/java/" + modelPackage.replace(".", "/");
-        File dir = new File(dirPath);
-        if (!dir.exists()) {
-            dir.mkdirs();
-        }
         String filePath = dirPath + "/" + className + "Repository.java";
         FileOperator.writeFile(filePath, repoContent);
     }
