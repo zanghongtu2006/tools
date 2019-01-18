@@ -79,8 +79,11 @@ public class Dao2POJO {
                         mapParams.put(colName, colType);
                         mapParamColumns.put(colName, resultSetMetaData.getColumnName(i));
                     }
-//                    writePojos(className, tableName, setJavaTypes, mapParams, mapParamColumns);
-//                    writeRepositories(className, tableName, idType);
+                    // 生成model类
+                    writePojos(className, tableName, setJavaTypes, mapParams, mapParamColumns);
+                    // 生成Dao
+                    writeRepositories(className, tableName, idType);
+                    // 生成对应Service
                     writeServices(className, moduleName, idType);
                     writeServiceImpls(className, moduleName, idType);
                 } finally {
@@ -113,54 +116,47 @@ public class Dao2POJO {
             dir.mkdirs();
         }
 
-        StringBuilder serviceContent = new StringBuilder();
-        serviceContent.append("package " + modelPackage + ";\n\n")
-                .append("import " + databasepackage + ".model." + className + ";\n")
-                .append("import " + databasepackage + ".repository." + className + "Repository;\n")
-                .append("import " + databasepackage + ".service." + className + "Service;\n")
-                .append("import org.springframework.beans.factory.annotation.Autowired;\n")
-                .append("import org.springframework.stereotype.Service;\n\n")
-                .append("import java.util.List;\n\n")
-                .append("/**\n")
-                .append(" * @author : Auto Generated\n")
-                .append(" */\n\n")
-                .append("@Service\n")
-                .append("public class " + className + "ServiceImpl implements " + className + "Service {\n")
-                .append(tab).append("@Autowired\n")
-                .append(tab).append("private " + className + "Repository " + moduleName + "Repository;\n\n")
-
-                .append(tab).append("@Override\n")
-                .append(tab).append("public " + className + " create(" + className + " " + moduleName + ") {\n")
-                .append(tab).append(tab).append("return " + moduleName + "Repository.save(" + moduleName + ");\n")
-                .append(tab).append("}\n\n")
-
-                .append(tab).append("@Override\n")
-                .append(tab).append("public " + className + " delete(" + idType + " id) {\n")
-                .append(tab).append(tab).append(className + " " + moduleName + "=" + moduleName + "Repository.getOne(id);\n")
-                .append(tab).append(tab).append(moduleName + "Repository.deleteById(id);\n")
-                .append(tab).append(tab).append("return " + moduleName + ";\n")
-                .append(tab).append("}\n\n")
-
-                .append(tab).append("@Override\n")
-                .append(tab).append("public " + className + " update(" + className + " " + moduleName + ") {\n")
-                .append(tab).append(tab).append("return " + moduleName + "Repository.save(" + moduleName + ");\n")
-                .append(tab).append("}\n\n")
-
-                .append(tab).append("@Override\n")
-                .append(tab).append("public " + className + " get(" + idType + " id) {\n")
-                .append(tab).append(tab).append("return " + moduleName + "Repository.getOne(id);\n")
-                .append(tab).append("}\n\n")
-
-                .append(tab).append("@Override\n")
-                .append(tab).append("public List<" + className + "> listAll() {\n")
-                .append(tab).append(tab).append("return " + moduleName + "Repository.findAll();\n")
-                .append(tab).append("}\n\n")
-
-                .append("}\n");
+        String serviceContent = ("package " + modelPackage + ";\n\n") +
+                "import " + databasepackage + ".model." + className + ";\n" +
+                "import " + databasepackage + ".repository." + className + "Repository;\n" +
+                "import " + databasepackage + ".service." + className + "Service;\n" +
+                "import org.springframework.beans.factory.annotation.Autowired;\n" +
+                "import org.springframework.stereotype.Service;\n\n" +
+                "import java.util.List;\n\n" +
+                "/**\n" +
+                " * @author : Auto Generated\n" +
+                " */\n\n" +
+                "@Service\n" +
+                "public class " + className + "ServiceImpl implements " + className + "Service {\n" +
+                tab + "@Autowired\n" +
+                tab + "private " + className + "Repository " + moduleName + "Repository;\n\n" +
+                tab + "@Override\n" +
+                tab + "public " + className + " create(" + className + " " + moduleName + ") {\n" +
+                tab + tab + "return " + moduleName + "Repository.save(" + moduleName + ");\n" +
+                tab + "}\n\n" +
+                tab + "@Override\n" +
+                tab + "public " + className + " delete(" + idType + " id) {\n" +
+                tab + tab + className + " " + moduleName + "=" + moduleName + "Repository.getOne(id);\n" +
+                tab + tab + moduleName + "Repository.deleteById(id);\n" +
+                tab + tab + "return " + moduleName + ";\n" +
+                tab + "}\n\n" +
+                tab + "@Override\n" +
+                tab + "public " + className + " update(" + className + " " + moduleName + ") {\n" +
+                tab + tab + "return " + moduleName + "Repository.save(" + moduleName + ");\n" +
+                tab + "}\n\n" +
+                tab + "@Override\n" +
+                tab + "public " + className + " get(" + idType + " id) {\n" +
+                tab + tab + "return " + moduleName + "Repository.getOne(id);\n" +
+                tab + "}\n\n" +
+                tab + "@Override\n" +
+                tab + "public List<" + className + "> listAll() {\n" +
+                tab + tab + "return " + moduleName + "Repository.findAll();\n" +
+                tab + "}\n\n" +
+                "}\n";
 
 
         String filePath = dirPath + "/" + className + "ServiceImpl.java";
-        FileOperator.writeFile(filePath, serviceContent.toString());
+        FileOperator.writeFile(filePath, serviceContent);
     }
 
     private void writeServices(String className, String modelName, String idType) {
@@ -213,15 +209,16 @@ public class Dao2POJO {
 
     private void writePojos(String className, String tableName, Set<String> setJavaTypes, Map<String, String> mapParams, Map<String, String> mapParamColumns) {
         String modelPackage = databasepackage + ".model";
-        String pojo = headers(setJavaTypes, modelPackage) + classDefination(className, tableName) +
-                parameters(mapParams, mapParamColumns) +
-                getterAndSetter(mapParams) +
-                toStrings(className, mapParams);
         String dirPath = System.getProperty("user.dir") + "/src/main/java/" + modelPackage.replace(".", "/");
         File dir = new File(dirPath);
         if (!dir.exists()) {
             dir.mkdirs();
         }
+
+        String pojo = headers(setJavaTypes, modelPackage) + classDefination(className, tableName) +
+                parameters(mapParams, mapParamColumns) +
+                getterAndSetter(mapParams) +
+                toStrings(className, mapParams);
         String filePath = dirPath + "/" + className + ".java";
         FileOperator.writeFile(filePath, pojo);
     }
